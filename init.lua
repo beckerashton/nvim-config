@@ -54,7 +54,7 @@ do
   vim.o.updatetime = 250
 
   -- Decrease mapped sequence wait time
-  vim.o.timeoutlen = 300
+  vim.o.timeoutlen = 1000
 
   -- Configure how new splits should be opened
   vim.o.splitright = true
@@ -346,6 +346,10 @@ do
 
   vim.cmd.colorscheme 'dracula'
 
+  -- Clear Backgrounds
+  vim.api.nvim_set_hl(0, 'Normal', { bg = 'none' })
+  vim.api.nvim_set_hl(0, 'NormalFloat', { bg = 'none' })
+
   -- Highlight todo, notes, etc in comments
   vim.pack.add { gh 'folke/todo-comments.nvim' }
   require('todo-comments').setup { signs = false }
@@ -469,6 +473,7 @@ do
   vim.keymap.set({ 'n', 'v' }, '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord' })
   vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch by [G]rep' })
   vim.keymap.set('n', '<leader>sd', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
+  vim.keymap.set('n', '<leader>sD', builtin.git_status, { desc = '[S]earch [^D]iff' })
   vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
   vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
   vim.keymap.set('n', '<leader>sc', builtin.commands, { desc = '[S]earch [C]ommands' })
@@ -656,7 +661,8 @@ do
 
     stylua = {}, -- Used to format Lua code
 
-    gdtoolkit = {},
+    gdscript = {}, -- Godot editor must be running for its built-in language server
+    omnisharp = {}, -- C# language server
     -- Special Lua Config, as recommended by neovim help docs
     lua_ls = {
       on_init = function(client)
@@ -712,9 +718,13 @@ do
   --    :Mason
   --
   -- You can press `g?` for help in this menu.
-  local ensure_installed = vim.tbl_keys(servers or {})
+  local ensure_installed = {}
+  for name in pairs(servers or {}) do
+    -- Godot provides its GDScript server; Mason only installs external tools.
+    if name ~= 'gdscript' then table.insert(ensure_installed, name) end
+  end
   vim.list_extend(ensure_installed, {
-    -- You can add other tools here that you want Mason to install
+    'gdtoolkit', -- Provides gdlint for GDScript diagnostics
   })
 
   require('mason-tool-installer').setup { ensure_installed = ensure_installed }
@@ -737,6 +747,7 @@ do
     format_on_save = function(bufnr)
       -- You can specify filetypes to autoformat on save here:
       local enabled_filetypes = {
+        cs = true,
         -- lua = true,
         -- python = true,
       }
@@ -928,7 +939,7 @@ do
   --
   -- require 'kickstart.plugins.debug'
   -- require 'kickstart.plugins.indent_line'
-  -- require 'kickstart.plugins.lint'
+  require 'kickstart.plugins.lint'
   -- require 'kickstart.plugins.autopairs'
   -- require 'kickstart.plugins.neo-tree'
 
@@ -959,6 +970,24 @@ do
     },
   }
 
+  vim.api.nvim_create_autocmd('User', {
+    pattern = 'MiniFilesBufferCreate',
+    callback = function(args)
+      vim.keymap.set('n', '<Esc>', MiniFiles.close, { buffer = args.data.buf_id, desc = 'Close mini.files' })
+      vim.keymap.set('n', '<C-t>', function()
+        local entry = MiniFiles.get_fs_entry()
+        if not entry or entry.fs_type ~= 'file' then return end
+        local target = MiniFiles.get_explorer_state().target_window
+        local tab_window = vim.api.nvim_win_call(target, function()
+          vim.cmd 'tab split'
+          return vim.api.nvim_get_current_win()
+        end)
+        MiniFiles.set_target_window(tab_window)
+        MiniFiles.go_in { close_on_file = true }
+      end, { buffer = args.data.buf_id, desc = 'Open file in new tab' })
+    end,
+  })
+
   vim.keymap.set('n', '-', function()
     -- Opens mini.files focusing on the directory of the current file
     require('mini.files').open(vim.api.nvim_buf_get_name(0), true)
@@ -968,6 +997,130 @@ do
     -- Opens mini.files focusing on your current working directory
     require('mini.files').open(vim.uv.cwd(), true)
   end, { desc = 'Open mini.files (cwd)' })
+
+  vim.pack.add { { src = gh 'folke/noice.nvim', version = 'main' }, { src = gh 'MunifTanjim/nui.nvim' } }
+  require('noice').setup {
+    lsp = {
+      -- override markdown rendering so that **cmp** and other plugins use **Treesitter**
+      override = {
+        ['vim.lsp.util.convert_input_to_markdown_lines'] = true,
+        ['vim.lsp.util.stylize_markdown'] = true,
+      },
+    },
+    -- you can enable a preset for easier configuration
+    presets = {
+      bottom_search = false, -- use a classic bottom cmdline for search
+      command_palette = true, -- position the cmdline and popupmenu together
+      long_message_to_split = true, -- long messages will be sent to a split
+      inc_rename = false, -- enables an input dialog for inc-rename.nvim
+      lsp_doc_border = true, -- add a border to hover docs and signature help
+    },
+    views = {
+      cmdline_popup = {
+        position = {
+          row = '30%',
+          col = '50%',
+        },
+        size = {
+          min_width = 10,
+          width = 'auto',
+          height = 'auto',
+        },
+        border = {
+          style = 'rounded',
+        },
+      },
+    },
+  }
+
+  vim.pack.add { gh 'nanozuki/tabby.nvim' }
+
+  require('tabby').setup {
+    line = function(line)
+      local theme = {
+        fill = { fg = '#87e58e', bg = 'NONE' },
+        head = { fg = '#87e58e', bg = '#04075a' },
+        current_tab = { fg = '#282a36', bg = '#bd93f9', style = 'bold' },
+        tab = { fg = '#bd93f9', bg = '#04075a' },
+        current_win = { fg = '#282a36', bg = '#bd93f9', style = 'bold' },
+        win = { fg = '#f8f8f2', bg = '#04075a' },
+        tail = { fg = '#87e58e', bg = '#04075a' },
+      }
+
+      local cwd = ' ' .. vim.fn.fnamemodify(vim.fn.getcwd(), ':t') .. ' '
+      local strwidth = vim.api.nvim_strwidth
+      local left_width = strwidth(cwd) + 1
+      local right_width = 3
+      local win_line = line.wins_in_tab(line.api.get_current_tab())
+      for _, win in ipairs(win_line.wins) do
+        right_width = right_width + strwidth(win.buf_name()) + 4
+      end
+
+      return {
+        { cwd, hl = { fg = theme.head.bg, bg = theme.head.fg } },
+        { '', hl = { fg = theme.head.fg, bg = theme.head.bg } },
+        line.tabs().foreach(function(tab)
+          local hl = tab.is_current() and theme.current_tab or theme.tab
+          local name = tab.name()
+          left_width = left_width + strwidth(name) + 4
+
+          return {
+            line.sep('', hl, theme.fill),
+            name,
+            line.sep('', hl, theme.fill),
+            hl = hl,
+            margin = ' ',
+          }
+        end),
+
+        string.rep('=', math.max(0, vim.o.columns - left_width - right_width)),
+
+        win_line.foreach(function(win)
+          local hl = win.is_current() and theme.current_win or theme.win
+          local name = win.buf_name()
+
+          return {
+            line.sep('', hl, theme.fill),
+            name,
+            line.sep('', hl, theme.fill),
+            hl = hl,
+            margin = ' ',
+          }
+        end),
+
+        { '██', hl = { fg = theme.tail.fg, bg = theme.tail.bg } },
+        hl = theme.fill,
+      }
+    end,
+
+    option = {
+      theme = {},
+      nerdfont = true,
+      buf_name = { mode = 'tail' },
+    },
+  }
+
+  vim.keymap.set('n', '<leader>ta', ':$tabnew<CR>', { noremap = true, desc = '[T]ab [A]dd' })
+  vim.keymap.set('n', '<leader>td', ':tabclose<CR>', { noremap = true, desc = '[T]ab [D]elete' })
+  vim.keymap.set('n', '<leader>to', ':tabonly<CR>', { noremap = true, desc = '[T]ab [O]nly' })
+  vim.keymap.set('n', '<leader>tn', ':tabn<CR>', { noremap = true, desc = '[T]ab [N]ext' })
+  vim.keymap.set('n', '<leader>tp', ':tabp<CR>', { noremap = true, desc = '[T]ab [P]revious' })
+  -- move current tab to previous position
+  vim.keymap.set('n', '<leader>tmp', ':-tabmove<CR>', { noremap = true, desc = '[T]ab [M]ove [P]revious' })
+  -- move current tab to next position
+  vim.keymap.set('n', '<leader>tmn', ':+tabmove<CR>', { noremap = true, desc = '[T]ab [M]ove [N]ext' })
+  vim.keymap.set('n', '<leader>tt', function()
+    vim.cmd('tabnew')
+    vim.cmd('terminal')
+    vim.cmd('startinsert')
+  end, { noremap = true, desc = 'Open [T]erminal [T]ab' })
+
+  vim.api.nvim_set_hl(0, 'TabLineFill', { bg = 'NONE' })
+  vim.api.nvim_set_hl(0, 'MiniFilesDirectory', { link = 'Directory' })
+  vim.api.nvim_set_hl(0, 'FloatBorder', { link = 'AlphaShortcut' })
+  vim.api.nvim_set_hl(0, 'NoiceLspHoverBorder', { link = 'AlphaShortcut' })
+  vim.api.nvim_set_hl(0, 'NoiceCmdlinePopupBorderSearch', { link = 'Character' })
+  vim.api.nvim_set_hl(0, 'TelescopeNormal', { link = 'Normal' })
 end
 
 -- The line beneath this is called `modeline`. See `:help modeline`
