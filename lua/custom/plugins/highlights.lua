@@ -1,0 +1,6 @@
+vim.api.nvim_set_hl(0, 'TabLineFill', { bg = 'NONE' })
+vim.api.nvim_set_hl(0, 'MiniFilesDirectory', { link = 'Directory' })
+vim.api.nvim_set_hl(0, 'FloatBorder', { link = 'AlphaShortcut' })
+vim.api.nvim_set_hl(0, 'NoiceLspHoverBorder', { link = 'AlphaShortcut' })
+vim.api.nvim_set_hl(0, 'NoiceCmdlinePopupBorderSearch', { link = 'Character' })
+vim.api.nvim_set_hl(0, 'TelescopeNormal', { link = 'Normal' })

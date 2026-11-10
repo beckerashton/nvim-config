@@ -1,5 +1,23 @@
 # kickstart.nvim
 
+## Local configuration layout
+
+`init.lua` loads core settings and then the plugins in explicit order.
+
+- `lua/config/options.lua`: leaders and editor options.
+- `lua/config/keymaps.lua`: general mappings and diagnostic settings.
+- `lua/config/autocmds.lua`: general autocommands.
+- `lua/config/pack.lua`: plugin install/update build hooks.
+- `lua/custom/plugins/init.lua`: plugin load order and optional Kickstart modules.
+- `lua/custom/plugins/*.lua`: plugin setup and related mappings, grouped by feature
+  (UI, Telescope, LSP, formatting, completion, Treesitter, files, Noice, tabs,
+  statusline, cursor effects, and highlight overrides).
+- `lua/kickstart/plugins/lint.lua`: active linting configuration.
+
+To add a plugin, create a module in `lua/custom/plugins/` and require it explicitly
+in `lua/custom/plugins/init.lua` after its dependencies. The upstream Kickstart
+documentation below describes the original single-file starting point.
+
 ## Introduction
 
 A starting point for Neovim that is:
