@@ -1,3 +1,5 @@
+vim.o.showtabline = 2
+
 vim.pack.add { 'https://github.com/nanozuki/tabby.nvim' }
 
 require('tabby').setup {
@@ -23,7 +25,7 @@ require('tabby').setup {
 
     return {
       { cwd, hl = { fg = theme.head.bg, bg = theme.head.fg } },
-      { '', hl = { fg = theme.head.fg, bg = theme.head.bg } },
+      { '', hl = { fg = theme.head.fg, bg = theme.fill.bg } },
       line.tabs().foreach(function(tab)
         local hl = tab.is_current() and theme.current_tab or theme.tab
         local name = tab.name()
@@ -53,7 +55,7 @@ require('tabby').setup {
         }
       end),
 
-      { '██', hl = { fg = theme.tail.fg, bg = theme.tail.bg } },
+      { '██', hl = { fg = theme.fill.fg, bg = theme.fill.bg } },
       hl = theme.fill,
     }
   end,

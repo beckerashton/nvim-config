@@ -115,7 +115,13 @@ local servers = {
   stylua = {}, -- Used to format Lua code
 
   gdscript = {}, -- Godot editor must be running for its built-in language server
-  omnisharp = {}, -- C# language server
+  omnisharp = {
+    -- OmniSharp needs these options before it initializes the workspace.
+    cmd_env = {
+      ['OMNISHARP_FormattingOptions:EnableEditorConfigSupport'] = 'true',
+      ['OMNISHARP_RoslynExtensionsOptions:EnableAnalyzersSupport'] = 'true',
+    },
+  },
   -- Special Lua Config, as recommended by neovim help docs
   lua_ls = {
     on_init = function(client)
