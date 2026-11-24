@@ -48,27 +48,57 @@ gitsigns.setup {
     end, { desc = 'Jump to previous git [c]hange', buf = bufnr })
 
     -- Visual mode actions
-    vim.keymap.set('v', '<leader>hs', function() gitsigns.stage_hunk { vim.fn.line '.', vim.fn.line 'v' } end, { desc = 'git [s]tage hunk', buf = bufnr })
-    vim.keymap.set('v', '<leader>hr', function() gitsigns.reset_hunk { vim.fn.line '.', vim.fn.line 'v' } end, { desc = 'git [r]eset hunk', buf = bufnr })
+    -- vim.keymap.set('v', '<leader>hs', function() gitsigns.stage_hunk { vim.fn.line '.', vim.fn.line 'v' } end, { desc = 'git [s]tage hunk', buf = bufnr })
+    -- vim.keymap.set('v', '<leader>hr', function() gitsigns.reset_hunk { vim.fn.line '.', vim.fn.line 'v' } end, { desc = 'git [r]eset hunk', buf = bufnr })
     -- Normal mode actions
-    vim.keymap.set('n', '<leader>hs', gitsigns.stage_hunk, { desc = 'git [s]tage hunk', buf = bufnr })
-    vim.keymap.set('n', '<leader>hr', gitsigns.reset_hunk, { desc = 'git [r]eset hunk', buf = bufnr })
-    vim.keymap.set('n', '<leader>hS', gitsigns.stage_buffer, { desc = 'git [S]tage buffer', buf = bufnr })
-    vim.keymap.set('n', '<leader>hR', gitsigns.reset_buffer, { desc = 'git [R]eset buffer', buf = bufnr })
-    vim.keymap.set('n', '<leader>hp', gitsigns.preview_hunk, { desc = 'git [p]review hunk', buf = bufnr })
-    vim.keymap.set('n', '<leader>hi', gitsigns.preview_hunk_inline, { desc = 'git preview hunk [i]nline', buf = bufnr })
-    vim.keymap.set('n', '<leader>hb', function() gitsigns.blame_line { full = true } end, { desc = 'git [b]lame line', buf = bufnr })
-    vim.keymap.set('n', '<leader>hd', gitsigns.diffthis, { desc = 'git [d]iff against index', buf = bufnr })
-    vim.keymap.set('n', '<leader>hD', function() gitsigns.diffthis '~' end, { desc = 'git [D]iff against last commit', buf = bufnr })
-    vim.keymap.set('n', '<leader>hQ', function() gitsigns.setqflist 'all' end, { desc = 'git hunk [Q]uickfix list (all files in repo)', buf = bufnr })
-    vim.keymap.set('n', '<leader>hq', gitsigns.setqflist, { desc = 'git hunk [q]uickfix list (all changes in this file)', buf = bufnr })
+    -- vim.keymap.set('n', '<leader>hs', gitsigns.stage_hunk, { desc = 'git [s]tage hunk', buf = bufnr })
+    -- vim.keymap.set('n', '<leader>hr', gitsigns.reset_hunk, { desc = 'git [r]eset hunk', buf = bufnr })
+    -- vim.keymap.set('n', '<leader>hS', gitsigns.stage_buffer, { desc = 'git [S]tage buffer', buf = bufnr })
+    -- vim.keymap.set('n', '<leader>hR', gitsigns.reset_buffer, { desc = 'git [R]eset buffer', buf = bufnr })
+    -- vim.keymap.set('n', '<leader>hp', gitsigns.preview_hunk, { desc = 'git [p]review hunk', buf = bufnr })
+    -- vim.keymap.set('n', '<leader>hi', gitsigns.preview_hunk_inline, { desc = 'git preview hunk [i]nline', buf = bufnr })
+    -- vim.keymap.set('n', '<leader>hb', function() gitsigns.blame_line { full = true } end, { desc = 'git [b]lame line', buf = bufnr })
+    -- vim.keymap.set('n', '<leader>hd', gitsigns.diffthis, { desc = 'git [d]iff against index', buf = bufnr })
+    -- vim.keymap.set('n', '<leader>hD', function() gitsigns.diffthis '~' end, { desc = 'git [D]iff against last commit', buf = bufnr })
+    -- vim.keymap.set('n', '<leader>hQ', function() gitsigns.setqflist 'all' end, { desc = 'git hunk [Q]uickfix list (all files in repo)', buf = bufnr })
+    -- vim.keymap.set('n', '<leader>hq', gitsigns.setqflist, { desc = 'git hunk [q]uickfix list (all changes in this file)', buf = bufnr })
     -- Toggles
     vim.keymap.set('n', '<leader>tb', gitsigns.toggle_current_line_blame, { desc = '[T]oggle git show [b]lame line', buf = bufnr })
-    vim.keymap.set('n', '<leader>tw', gitsigns.toggle_word_diff, { desc = '[T]oggle git intra-line [w]ord diff', buf = bufnr })
+    -- vim.keymap.set('n', '<leader>tw', gitsigns.toggle_word_diff, { desc = '[T]oggle git intra-line [w]ord diff', buf = bufnr })
     -- Text object
-    vim.keymap.set({ 'o', 'x' }, 'ih', gitsigns.select_hunk, { desc = 'text object [i]nside [h]unk', buf = bufnr })
+    -- vim.keymap.set({ 'o', 'x' }, 'ih', gitsigns.select_hunk, { desc = 'text object [i]nside [h]unk', buf = bufnr })
   end,
 }
+
+vim.pack.add { 'https://github.com/sindrets/diffview.nvim' }
+local diffview = require 'diffview'
+
+diffview.setup {
+  enhanced_diff_hl = true,
+}
+
+vim.keymap.set('n', '<leader>gd', '<Cmd>DiffviewOpen<CR>', { desc = '[G]it [D]iff open' })
+
+vim.pack.add { 'https://github.com/isakbm/gitgraph.nvim' }
+local gitgraph = require 'gitgraph'
+
+gitgraph.setup {
+  symbols = {
+    commit = '●',
+    merge_commit = '◆',
+    commit_end = '○',
+    merge_commit_end = '◇',
+  },
+  format = {
+    timestamp = '%m-%d',
+    fields = { 'author', 'hash', 'timestamp', 'branch_name', 'tag' },
+  },
+  hooks = {
+    on_select_range_commit = function(from, to) vim.cmd.DiffviewOpen(from.hash .. '..' .. to.hash) end,
+  },
+}
+
+vim.keymap.set('n', '<leader>gg', function() gitgraph.draw({}, { all = true, max_count = 1000 }) end, { desc = '[G]it [G]raph' })
 
 -- Useful plugin to show you pending keybinds.
 vim.pack.add { 'https://github.com/folke/which-key.nvim' }
@@ -97,6 +127,21 @@ require('dracula').setup {
   styles = {
     comments = { italic = true }, -- Disable italics in comments
   },
+  overrides = function(colors)
+    return {
+      GitGraphBranch1 = { fg = colors.cyan },
+      GitGraphBranch2 = { fg = colors.purple },
+      GitGraphBranch3 = { fg = colors.pink },
+      GitGraphBranch4 = { fg = colors.green },
+      GitGraphBranch5 = { fg = colors.orange },
+      GitGraphAuthor = { fg = '#04075A' },
+      GitGraphTimestamp = { fg = colors.comment },
+      GitGraphHash = { fg = colors.green },
+      GitGraphBranchName = { fg = colors.pink },
+      GitGraphBranchTag = { fg = colors.yellow },
+      GitGraphBranchMsg = { fg = colors.fg },
+    }
+  end,
 }
 
 vim.cmd.colorscheme 'dracula'

@@ -28,6 +28,15 @@
 vim.pack.add { 'https://github.com/j-hui/fidget.nvim' }
 require('fidget').setup {}
 
+-- Telescope's single-result jumps and focused LSP showDocument requests meet here.
+local show_document = vim.lsp.util.show_document
+local place_jump = require('custom.jump_view').place
+vim.lsp.util.show_document = function(location, encoding, opts)
+  local shown = show_document(location, encoding, opts)
+  if shown and (not opts or opts.focus ~= false) and (location.range or location.targetSelectionRange) then place_jump() end
+  return shown
+end
+
 --  This function gets run when an LSP attaches to a particular buffer.
 --    That is to say, every time a new file is opened that is associated with
 --    an lsp (for example, opening `main.rs` is associated with `rust_analyzer`) this
@@ -45,6 +54,8 @@ vim.api.nvim_create_autocmd('LspAttach', {
       vim.keymap.set(mode, keys, func, { buffer = event.buf, desc = 'LSP: ' .. desc })
     end
 
+    map('K', function() vim.lsp.buf.hover { border = 'rounded' } end, 'Hover documentation')
+
     -- Rename the variable under your cursor.
     --  Most Language Servers support renaming across files, etc.
     map('grn', vim.lsp.buf.rename, '[R]e[n]ame')
@@ -52,10 +63,6 @@ vim.api.nvim_create_autocmd('LspAttach', {
     -- Execute a code action, usually your cursor needs to be on top of an error
     -- or a suggestion from your LSP for this to activate.
     map('gra', vim.lsp.buf.code_action, '[G]oto Code [A]ction', { 'n', 'x' })
-
-    -- WARN: This is not Goto Definition, this is Goto Declaration.
-    --  For example, in C this would take you to the header.
-    map('grD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
 
     -- The following two autocommands are used to highlight references of the
     -- word under your cursor when your cursor rests there for a little while.
@@ -65,7 +72,8 @@ vim.api.nvim_create_autocmd('LspAttach', {
     local client = vim.lsp.get_client_by_id(event.data.client_id)
     if client and client:supports_method('textDocument/documentHighlight', event.buf) then
       local highlight_augroup = vim.api.nvim_create_augroup('kickstart-lsp-highlight', { clear = false })
-      vim.api.nvim_create_autocmd({ 'CursorHold', 'CursorHoldI' }, {
+      local highlight_events = client.name == 'roslyn_ls' and { 'CursorHold' } or { 'CursorHold', 'CursorHoldI' }
+      vim.api.nvim_create_autocmd(highlight_events, {
         buffer = event.buf,
         group = highlight_augroup,
         callback = vim.lsp.buf.document_highlight,
@@ -115,11 +123,16 @@ local servers = {
   stylua = {}, -- Used to format Lua code
 
   gdscript = {}, -- Godot editor must be running for its built-in language server
-  omnisharp = {
-    -- OmniSharp needs these options before it initializes the workspace.
-    cmd_env = {
-      ['OMNISHARP_FormattingOptions:EnableEditorConfigSupport'] = 'true',
-      ['OMNISHARP_RoslynExtensionsOptions:EnableAnalyzersSupport'] = 'true',
+  roslyn_ls = {
+    handlers = {
+      ['textDocument/diagnostic'] = require('custom.csharp_status').pull_diagnostics,
+      ['textDocument/publishDiagnostics'] = require('custom.csharp_status').publish_diagnostics,
+    },
+    settings = {
+      ['csharp|background_analysis'] = {
+        dotnet_analyzer_diagnostics_scope = 'openFiles',
+        dotnet_compiler_diagnostics_scope = 'openFiles',
+      },
     },
   },
   -- Special Lua Config, as recommended by neovim help docs
@@ -165,9 +178,13 @@ vim.pack.add {
 -- Automatically install LSPs and related tools to stdpath for Neovim
 require('mason').setup {}
 
+for name, server in pairs(servers) do
+  vim.lsp.config(name, server)
+end
+
 -- Translates between nvim-lspconfig server names and mason.nvim package names (e.g. lua_ls <-> lua-language-server)
 require('mason-lspconfig').setup {
-  automatic_enable = true, -- Change this to true if you want to automatically enable servers that are installed manually (e.g. via :Mason / :MasonInstall)
+  automatic_enable = { exclude = { 'omnisharp' } },
 }
 
 -- Ensure the servers and tools above are installed
@@ -183,12 +200,12 @@ for name in pairs(servers or {}) do
   if name ~= 'gdscript' then table.insert(ensure_installed, name) end
 end
 vim.list_extend(ensure_installed, {
+  'csharpier',
   'gdtoolkit', -- Provides gdlint for GDScript diagnostics
 })
 
 require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
-for name, server in pairs(servers) do
-  vim.lsp.config(name, server)
-  vim.lsp.enable(name)
+for name in pairs(servers) do
+  if not vim.lsp.is_enabled(name) then vim.lsp.enable(name) end
 end

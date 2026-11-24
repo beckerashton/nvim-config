@@ -10,7 +10,7 @@ require('conform').setup {
       -- python = true,
     }
     if enabled_filetypes[vim.bo[bufnr].filetype] then
-      return { timeout_ms = 500 }
+      return { timeout_ms = 2000 }
     else
       return nil
     end
@@ -20,6 +20,7 @@ require('conform').setup {
   },
   -- You can also specify external formatters in here.
   formatters_by_ft = {
+    cs = { 'csharpier' },
     gdscript = { 'gdscript-formatter' },
     -- rust = { 'rustfmt' },
     -- Conform can also run multiple formatters sequentially
@@ -27,6 +28,11 @@ require('conform').setup {
     --
     -- You can use 'stop_after_first' to run the first available formatter from the list
     -- javascript = { "prettierd", "prettier", stop_after_first = true },
+  },
+  formatters = {
+    csharpier = {
+      append_args = { '--config-path', vim.fn.stdpath 'config' .. '/.csharpierrc.json' },
+    },
   },
 }
 

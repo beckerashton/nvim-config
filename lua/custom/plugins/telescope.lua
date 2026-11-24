@@ -33,6 +33,34 @@ if vim.fn.executable 'make' == 1 then table.insert(telescope_plugins, 'https://g
 -- NOTE: You can install multiple plugins at once
 vim.pack.add(telescope_plugins)
 
+local place_lsp_jump = require('custom.jump_view').place
+local function attach_jump_view(place)
+  return function(prompt_bufnr)
+    require('telescope.actions.set').edit:enhance {
+      post = function(bufnr)
+        if bufnr == prompt_bufnr and vim.api.nvim_get_current_buf() ~= prompt_bufnr then place() end
+      end,
+    }
+    return true
+  end
+end
+
+local attach_lsp_jump_view = attach_jump_view(place_lsp_jump)
+local pickers = {
+  marks = { attach_mappings = attach_jump_view(function() vim.cmd.normal { 'zvzz', bang = true } end) },
+}
+for _, name in ipairs {
+  'lsp_definitions',
+  'lsp_implementations',
+  'lsp_references',
+  'lsp_type_definitions',
+  'lsp_document_symbols',
+  'lsp_workspace_symbols',
+  'lsp_dynamic_workspace_symbols',
+} do
+  pickers[name] = { attach_mappings = attach_lsp_jump_view }
+end
+
 -- See `:help telescope` and `:help telescope.setup()`
 require('telescope').setup {
   -- You can put your default mappings / updates / etc. in here
@@ -43,7 +71,7 @@ require('telescope').setup {
       i = { ['<c-Space>'] = 'to_fuzzy_refine' },
     },
   },
-  -- pickers = {}
+  pickers = pickers,
   extensions = {
     ['ui-select'] = { require('telescope.themes').get_dropdown() },
   },
@@ -55,6 +83,34 @@ pcall(require('telescope').load_extension, 'ui-select')
 
 -- See `:help telescope.builtin`
 local builtin = require 'telescope.builtin'
+
+local function goto_declaration()
+  local win = vim.api.nvim_get_current_win()
+  local buf = vim.api.nvim_get_current_buf()
+  vim.lsp.buf.declaration {
+    on_list = function(list)
+      if win ~= vim.api.nvim_get_current_win() or buf ~= vim.api.nvim_get_current_buf() then return end
+
+      if #list.items == 1 then
+        local item = list.items[1]
+        local location = item.user_data
+        -- The quickfix item already contains the column in bytes.
+        local position = { line = item.lnum - 1, character = item.col - 1 }
+        vim.lsp.util.show_document({ uri = location.uri or location.targetUri, range = { start = position, ['end'] = position } }, 'utf-8')
+        return
+      end
+
+      vim.fn.setqflist({}, ' ', list)
+      builtin.quickfix {
+        prompt_title = 'LSP Declarations',
+        attach_mappings = attach_lsp_jump_view,
+        push_cursor_on_edit = true,
+        push_tagstack_on_edit = true,
+      }
+    end,
+  }
+end
+
 vim.keymap.set('n', '<leader>sh', builtin.help_tags, { desc = '[S]earch [H]elp' })
 vim.keymap.set('n', '<leader>sk', builtin.keymaps, { desc = '[S]earch [K]eymaps' })
 vim.keymap.set('n', '<leader>sf', builtin.find_files, { desc = '[S]earch [F]iles' })
@@ -62,6 +118,7 @@ vim.keymap.set('n', '<leader>ss', builtin.builtin, { desc = '[S]earch [S]elect T
 vim.keymap.set({ 'n', 'v' }, '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord' })
 vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch by [G]rep' })
 vim.keymap.set('n', '<leader>sd', function() builtin.diagnostics { severity = vim.diagnostic.severity.ERROR } end, { desc = '[S]earch [D]iagnostics' })
+vim.keymap.set('n', '<leader>sb', function() require('custom.build_diagnostics').search() end, { desc = '[S]earch [B]uild diagnostics' })
 vim.keymap.set('n', '<leader>sD', builtin.git_status, { desc = '[S]earch [^D]iff' })
 vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
 vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
@@ -86,6 +143,8 @@ vim.api.nvim_create_autocmd('LspAttach', {
     -- This is where a variable was first declared, or where a function is defined, etc.
     -- To jump back, press <C-t>.
     vim.keymap.set('n', 'grd', builtin.lsp_definitions, { buffer = buf, desc = '[G]oto [D]efinition' })
+
+    vim.keymap.set('n', 'grD', goto_declaration, { buffer = buf, desc = '[G]oto [D]eclaration' })
 
     -- Fuzzy find all the symbols in your current document.
     -- Symbols are things like variables, functions, types, etc.

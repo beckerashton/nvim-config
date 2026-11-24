@@ -1,6 +1,7 @@
 vim.pack.add { { src = 'https://github.com/folke/noice.nvim', version = 'main' }, { src = 'https://github.com/MunifTanjim/nui.nvim' } }
 require('noice').setup {
   lsp = {
+    hover = { enabled = false },
     -- override markdown rendering so that **cmp** and other plugins use **Treesitter**
     override = {
       ['vim.lsp.util.convert_input_to_markdown_lines'] = true,

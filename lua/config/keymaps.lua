@@ -5,6 +5,17 @@
 --  See `:help hlsearch`
 vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
 
+-- Match starts of letter runs, camelCase parts, acronym suffixes, and digit runs.
+local subword_start = [[\m\C\a\@1<!\a\|\l\@1<=\u\|\u\@1<=\u\l\@=\|\d\@1<!\d]]
+local function move_subword(flags)
+  for _ = 1, vim.v.count1 do
+    if vim.fn.search(subword_start, flags) == 0 then break end
+  end
+end
+
+vim.keymap.set({ 'n', 'x' }, '<A-h>', function() move_subword 'bW' end, { desc = 'Previous subword start' })
+vim.keymap.set({ 'n', 'x' }, '<A-l>', function() move_subword 'W' end, { desc = 'Next subword start' })
+
 -- Diagnostic Config & Keymaps
 --  See `:help vim.diagnostic.Opts`
 vim.diagnostic.config {

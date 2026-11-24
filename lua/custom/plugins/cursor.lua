@@ -13,7 +13,8 @@ require('smear_cursor').setup {
   smear_to_cmd = false,
   scroll_buffer_space = true,
 }
-require('cinnamon').setup {
+local cinnamon = require 'cinnamon'
+cinnamon.setup {
   keymaps = {
     basic = true,
     extra = true,
@@ -25,6 +26,31 @@ require('cinnamon').setup {
     },
   },
 }
+
+local function center_jump(motion)
+  local count = vim.v.count
+  local command = (count > 0 and tostring(count) or '') .. motion .. 'zvzz'
+  cinnamon.scroll(function() vim.cmd.normal { command, bang = true } end)
+end
+
+for _, motion in ipairs { 'G', 'gg' } do
+  vim.keymap.set({ 'n', 'x' }, motion, function()
+    if vim.v.count == 0 then
+      cinnamon.scroll(motion)
+    else
+      center_jump(motion)
+    end
+  end, { desc = 'Go to line and center counted jumps' })
+end
+
+-- Keep previous-context and other special mark commands native.
+for _, prefix in ipairs { "'", '`', "g'", 'g`' } do
+  for mark in ('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'):gmatch '.' do
+    local motion = prefix .. mark
+    vim.keymap.set('n', motion, motion .. 'zvzz', { desc = 'Jump to mark and center' })
+  end
+end
+
 local scrollbar_colors = require('dracula').colors()
 require('scrollbar').setup {
   scrollbar = {
