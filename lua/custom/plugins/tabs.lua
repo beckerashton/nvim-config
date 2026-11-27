@@ -1,6 +1,6 @@
 vim.o.showtabline = 2
 
-vim.pack.add { 'https://github.com/nanozuki/tabby.nvim' }
+vim.pack.add({ 'https://github.com/nanozuki/tabby.nvim' }, { load = true })
 
 require('tabby').setup {
   line = function(line)

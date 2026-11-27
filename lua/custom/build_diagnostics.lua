@@ -31,13 +31,13 @@ function M.search()
       local output = (result.stdout or '') .. '\n' .. (result.stderr or '')
       local items = vim.fn.getqflist({
         lines = vim.split(output, '\n'),
-        efm = '%E%f(%l\\,%c): error %m,%W%f(%l\\,%c): warning %m,%E%f : error %m,%W%f : warning %m,%-G%.%#',
+        efm = '%E%f(%l\\,%c): error %m,%E%f : error %m,%-G%.%#',
       }).items
       vim.fn.setqflist({}, ' ', { title = 'dotnet build: ' .. vim.fs.basename(target), items = items })
       if #items > 0 then
-        require('telescope.builtin').quickfix { prompt_title = '.NET Build Diagnostics' }
+        require('telescope.builtin').quickfix { prompt_title = '.NET Build Errors' }
       elseif result.code == 0 then
-        vim.notify 'Build succeeded: no diagnostics'
+        vim.notify 'Build succeeded'
       else
         vim.notify('Build failed (exit ' .. result.code .. '):\n' .. vim.trim(output), vim.log.levels.ERROR)
       end

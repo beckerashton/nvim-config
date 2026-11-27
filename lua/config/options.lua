@@ -9,6 +9,13 @@ vim.g.maplocalleader = ' '
 
 vim.g.have_nerd_font = true
 
+-- Default to four spaces and let EditorConfig set project-specific styles.
+vim.o.expandtab = true
+vim.o.shiftwidth = 4
+vim.o.tabstop = 4
+vim.o.softtabstop = -1
+vim.g.gdscript_recommended_style = 0
+
 -- [[ Setting options ]]
 --  See `:help vim.o`
 -- NOTE: You can change these options as you wish!
@@ -22,6 +29,11 @@ vim.o.relativenumber = true
 
 -- Enable mouse mode, can be useful for resizing splits for example!
 vim.o.mouse = 'a'
+
+-- Use syntax-aware folds and start with them open.
+vim.o.foldmethod = 'expr'
+vim.o.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
+vim.o.foldlevelstart = 99
 
 -- Don't show the mode, since it's already in the status line
 vim.o.showmode = false

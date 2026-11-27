@@ -32,7 +32,13 @@ vim.api.nvim_create_autocmd('User', {
 
 vim.keymap.set('n', '-', function()
   -- Opens mini.files focusing on the directory of the current file
-  require('mini.files').open(vim.api.nvim_buf_get_name(0), true)
+  local path = vim.api.nvim_buf_get_name(0)
+  if vim.bo.buftype ~= '' or path == '' then path = vim.fn.getcwd() end
+  if not vim.uv.fs_stat(path) then
+    path = vim.fs.dirname(path)
+    if not path or vim.fn.isdirectory(path) == 0 then path = vim.fn.getcwd() end
+  end
+  require('mini.files').open(path, true)
 end, { desc = 'Open mini.files (Current File)' })
 
 vim.keymap.set('n', '_', function()
